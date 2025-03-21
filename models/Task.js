@@ -33,6 +33,7 @@ const Task = sequelize.define(
         key: 'id',
       },
     },
+    
   },
   {
     timestamps: true,

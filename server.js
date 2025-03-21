@@ -30,7 +30,7 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 5000;
 
 // Sincronizar modelos con la base de datos
-sequelize.sync({ alter: true }).then(() => {
+sequelize.sync().then(() => {
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
