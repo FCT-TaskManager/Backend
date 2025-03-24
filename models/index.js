@@ -4,6 +4,7 @@ const Task = require("./Task") // Modelo original de tareas
 const Project = require("./Project") // Nuevo modelo de proyectos
 const Column = require("./Column") // Nuevo modelo de columnas
 const KanbanTask = require("./KanbanTask") // Nuevo modelo de tareas Kanban
+const { ProjectInvitation, ProjectMember, Notification } = require("./ProjectModels")
 
 // Relaciones existentes para tareas normales
 User.hasMany(Task, { foreignKey: "userId", as: "tasks" })
@@ -64,6 +65,44 @@ KanbanTask.belongsTo(User, {
   as: "user",
 })
 
+// Asociaciones para ProjectMember
+ProjectMember.belongsTo(Project, {
+  foreignKey: "projectId",
+  as: "project",
+})
+
+ProjectMember.belongsTo(User, {
+  foreignKey: "userId",
+  as: "user",
+})
+
+// Asociaciones de Project con miembros
+Project.hasMany(ProjectMember, {
+  foreignKey: "projectId",
+  as: "members",
+})
+
+// Asociaciones de ProjectInvitation
+ProjectInvitation.belongsTo(Project, {
+  foreignKey: "projectId",
+  as: "project",
+})
+
+ProjectInvitation.belongsTo(User, {
+  foreignKey: "inviterId",
+  as: "inviter",
+})
+
+ProjectInvitation.belongsTo(User, {
+  foreignKey: "inviteeId",
+  as: "invitee",
+})
+
+// Asociaciones de Notification
+Notification.belongsTo(User, {
+  foreignKey: "userId",
+  as: "user",
+})
 // Exportar todos los modelos
 module.exports = {
   sequelize,
@@ -72,5 +111,8 @@ module.exports = {
   Project,
   Column,
   KanbanTask,
+  ProjectInvitation,
+  ProjectMember,
+  Notification,
 }
 
