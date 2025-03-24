@@ -21,13 +21,16 @@ app.use(cors());
 // Rutas
 app.use('/api/users', require('./routes/authRoutes'));
 app.use('/api/tasks', require('./routes/taskRoutes'));
+app.use('/api/projects', require('./routes/projectRoutes'));
+app.use('/api/kanban-tasks', require('./routes/kanbanTaskRoutes'));
+
 
 // Ruta de prueba
 app.get('/', (req, res) => {
   res.send('API is running...');
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 // Sincronizar modelos con la base de datos
 sequelize.sync().then(() => {
