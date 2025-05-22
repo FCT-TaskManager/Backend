@@ -80,6 +80,13 @@ ProjectMember.belongsTo(User, {
 Project.hasMany(ProjectMember, {
   foreignKey: "projectId",
   as: "members",
+  onDelete: "CASCADE",
+})
+
+// Relación entre User y ProjectMember
+User.hasMany(ProjectMember, { 
+  as: "memberships", 
+  foreignKey: "userId" 
 })
 
 // Asociaciones de ProjectInvitation
@@ -115,4 +122,3 @@ module.exports = {
   ProjectMember,
   Notification,
 }
-

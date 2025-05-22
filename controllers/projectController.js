@@ -1,19 +1,77 @@
-const { Project, Column, KanbanTask, User } = require("../models")
+const { Project, Column, KanbanTask, User, ProjectMember } = require("../models")
 
 // Obtener todos los proyectos
 const getProjects = async (req, res) => {
   try {
     const userId = req.user.id
 
-    // Buscar proyectos donde el usuario es propietario
-    const projects = await Project.findAll({
+    // Obtener proyectos donde el usuario es propietario
+    const ownedProjects = await Project.findAll({
       where: { ownerId: userId },
-      order: [["createdAt", "DESC"]],
+      include: [
+        {
+          model: User,
+          as: "owner",
+          attributes: ["id", "name", "email"],
+        },
+        {
+          model: ProjectMember,
+          as: "members",
+          include: [
+            {
+              model: User,
+              as: "user",
+              attributes: ["id", "name", "email"],
+            },
+          ],
+        },
+      ],
+    })
+
+    // Obtener proyectos donde el usuario es miembro
+    const memberProjects = await Project.findAll({
+      include: [
+        {
+          model: User,
+          as: "owner",
+          attributes: ["id", "name", "email"],
+        },
+        {
+          model: ProjectMember,
+          as: "members",
+          where: { userId },
+          include: [
+            {
+              model: User,
+              as: "user",
+              attributes: ["id", "name", "email"],
+            },
+          ],
+        },
+      ],
+    })
+
+    // Combinar los proyectos sin duplicados
+    const allProjectIds = new Set()
+    const allProjects = []
+
+    // Añadir proyectos propios
+    ownedProjects.forEach(project => {
+      allProjectIds.add(project.id)
+      allProjects.push(project)
+    })
+
+    // Añadir proyectos donde es miembro (sin duplicar)
+    memberProjects.forEach(project => {
+      if (!allProjectIds.has(project.id)) {
+        allProjectIds.add(project.id)
+        allProjects.push(project)
+      }
     })
 
     return res.status(200).json({
       success: true,
-      data: projects,
+      data: allProjects,
     })
   } catch (error) {
     console.error("Error getting projects:", error)
@@ -31,8 +89,9 @@ const getProjectById = async (req, res) => {
     const projectId = req.params.id
     const userId = req.user.id
 
+    // Verificar si el usuario es propietario o miembro del proyecto
     const project = await Project.findOne({
-      where: { id: projectId, ownerId: userId },
+      where: { id: projectId },
       include: [
         {
           model: Column,
@@ -51,6 +110,10 @@ const getProjectById = async (req, res) => {
           as: "owner",
           attributes: ["id", "name", "email"],
         },
+        {
+          model: ProjectMember,
+          as: "members",
+        },
       ],
     })
 
@@ -58,6 +121,17 @@ const getProjectById = async (req, res) => {
       return res.status(404).json({
         success: false,
         error: "Proyecto no encontrado",
+      })
+    }
+
+    // Verificar si el usuario es propietario o miembro
+    const isOwner = project.ownerId === userId
+    const isMember = project.members && project.members.some(member => member.userId === userId)
+
+    if (!isOwner && !isMember) {
+      return res.status(403).json({
+        success: false,
+        error: "No tienes acceso a este proyecto",
       })
     }
 
@@ -144,15 +218,32 @@ const getProjectColumns = async (req, res) => {
     const projectId = req.params.id
     const userId = req.user.id
 
-    // Verificar que el proyecto pertenezca al usuario
+    // Verificar si el usuario es propietario o miembro del proyecto
     const project = await Project.findOne({
-      where: { id: projectId, ownerId: userId },
+      where: { id: projectId },
+      include: [
+        {
+          model: ProjectMember,
+          as: "members",
+        },
+      ],
     })
 
     if (!project) {
       return res.status(404).json({
         success: false,
         error: "Proyecto no encontrado",
+      })
+    }
+
+    // Verificar si el usuario es propietario o miembro
+    const isOwner = project.ownerId === userId
+    const isMember = project.members && project.members.some(member => member.userId === userId)
+
+    if (!isOwner && !isMember) {
+      return res.status(403).json({
+        success: false,
+        error: "No tienes acceso a este proyecto",
       })
     }
 
@@ -188,15 +279,32 @@ const getProjectKanbanTasks = async (req, res) => {
     const projectId = req.params.id
     const userId = req.user.id
 
-    // Verificar que el proyecto pertenezca al usuario
+    // Verificar si el usuario es propietario o miembro del proyecto
     const project = await Project.findOne({
-      where: { id: projectId, ownerId: userId },
+      where: { id: projectId },
+      include: [
+        {
+          model: ProjectMember,
+          as: "members",
+        },
+      ],
     })
 
     if (!project) {
       return res.status(404).json({
         success: false,
         error: "Proyecto no encontrado",
+      })
+    }
+
+    // Verificar si el usuario es propietario o miembro
+    const isOwner = project.ownerId === userId
+    const isMember = project.members && project.members.some(member => member.userId === userId)
+
+    if (!isOwner && !isMember) {
+      return res.status(403).json({
+        success: false,
+        error: "No tienes acceso a este proyecto",
       })
     }
 
@@ -226,4 +334,3 @@ module.exports = {
   getProjectColumns,
   getProjectKanbanTasks,
 }
-

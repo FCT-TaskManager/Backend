@@ -1,4 +1,4 @@
-const { KanbanTask, Column, Project } = require("../models")
+const { KanbanTask, Column, Project, ProjectMember } = require("../models")
 
 // Crear una nueva tarea Kanban
 const createKanbanTask = async (req, res) => {
@@ -6,15 +6,32 @@ const createKanbanTask = async (req, res) => {
     const { title, description, dueDate, completed, projectId, columnId, order } = req.body
     const userId = req.user.id
 
-    // Verificar que el proyecto pertenezca al usuario
+    // Verificar que el proyecto exista
     const project = await Project.findOne({
-      where: { id: projectId, ownerId: userId },
+      where: { id: projectId },
+      include: [
+        {
+          model: ProjectMember,
+          as: "members",
+        },
+      ],
     })
 
     if (!project) {
       return res.status(404).json({
         success: false,
         error: "Proyecto no encontrado",
+      })
+    }
+
+    // Verificar si el usuario es propietario o miembro
+    const isOwner = project.ownerId === userId
+    const isMember = project.members && project.members.some(member => member.userId === userId)
+
+    if (!isOwner && !isMember) {
+      return res.status(403).json({
+        success: false,
+        error: "No tienes acceso a este proyecto",
       })
     }
 
@@ -63,15 +80,19 @@ const updateKanbanTask = async (req, res) => {
     const { title, description, dueDate, completed, order } = req.body
     const userId = req.user.id
 
-    // Buscar la tarea y verificar que pertenezca a un proyecto del usuario
+    // Buscar la tarea con su proyecto
     const task = await KanbanTask.findOne({
       where: { id: taskId },
       include: [
         {
           model: Project,
           as: "project",
-          where: { ownerId: userId },
-          attributes: [],
+          include: [
+            {
+              model: ProjectMember,
+              as: "members",
+            },
+          ],
         },
       ],
     })
@@ -80,6 +101,17 @@ const updateKanbanTask = async (req, res) => {
       return res.status(404).json({
         success: false,
         error: "Tarea no encontrada",
+      })
+    }
+
+    // Verificar si el usuario es propietario o miembro
+    const isOwner = task.project.ownerId === userId
+    const isMember = task.project.members && task.project.members.some(member => member.userId === userId)
+
+    if (!isOwner && !isMember) {
+      return res.status(403).json({
+        success: false,
+        error: "No tienes permisos para actualizar esta tarea",
       })
     }
 
@@ -113,15 +145,19 @@ const moveKanbanTask = async (req, res) => {
     const { columnId, order } = req.body
     const userId = req.user.id
 
-    // Buscar la tarea y verificar que pertenezca a un proyecto del usuario
+    // Buscar la tarea con su proyecto
     const task = await KanbanTask.findOne({
       where: { id: taskId },
       include: [
         {
           model: Project,
           as: "project",
-          where: { ownerId: userId },
-          attributes: [],
+          include: [
+            {
+              model: ProjectMember,
+              as: "members",
+            },
+          ],
         },
       ],
     })
@@ -130,6 +166,17 @@ const moveKanbanTask = async (req, res) => {
       return res.status(404).json({
         success: false,
         error: "Tarea no encontrada",
+      })
+    }
+
+    // Verificar si el usuario es propietario o miembro
+    const isOwner = task.project.ownerId === userId
+    const isMember = task.project.members && task.project.members.some(member => member.userId === userId)
+
+    if (!isOwner && !isMember) {
+      return res.status(403).json({
+        success: false,
+        error: "No tienes permisos para mover esta tarea",
       })
     }
 
@@ -171,15 +218,19 @@ const reorderKanbanTasks = async (req, res) => {
     const { columnId, taskOrder } = req.body
     const userId = req.user.id
 
-    // Verificar que la columna exista y pertenezca a un proyecto del usuario
+    // Verificar que la columna exista
     const column = await Column.findOne({
       where: { id: columnId },
       include: [
         {
           model: Project,
           as: "project",
-          where: { ownerId: userId },
-          attributes: [],
+          include: [
+            {
+              model: ProjectMember,
+              as: "members",
+            },
+          ],
         },
       ],
     })
@@ -188,6 +239,17 @@ const reorderKanbanTasks = async (req, res) => {
       return res.status(404).json({
         success: false,
         error: "Columna no encontrada",
+      })
+    }
+
+    // Verificar si el usuario es propietario o miembro
+    const isOwner = column.project.ownerId === userId
+    const isMember = column.project.members && column.project.members.some(member => member.userId === userId)
+
+    if (!isOwner && !isMember) {
+      return res.status(403).json({
+        success: false,
+        error: "No tienes permisos para reordenar estas tareas",
       })
     }
 
@@ -216,15 +278,19 @@ const deleteKanbanTask = async (req, res) => {
     const taskId = req.params.id
     const userId = req.user.id
 
-    // Buscar la tarea y verificar que pertenezca a un proyecto del usuario
+    // Buscar la tarea con su proyecto
     const task = await KanbanTask.findOne({
       where: { id: taskId },
       include: [
         {
           model: Project,
           as: "project",
-          where: { ownerId: userId },
-          attributes: [],
+          include: [
+            {
+              model: ProjectMember,
+              as: "members",
+            },
+          ],
         },
       ],
     })
@@ -233,6 +299,17 @@ const deleteKanbanTask = async (req, res) => {
       return res.status(404).json({
         success: false,
         error: "Tarea no encontrada",
+      })
+    }
+
+    // Verificar si el usuario es propietario o miembro
+    const isOwner = task.project.ownerId === userId
+    const isMember = task.project.members && task.project.members.some(member => member.userId === userId)
+
+    if (!isOwner && !isMember) {
+      return res.status(403).json({
+        success: false,
+        error: "No tienes permisos para eliminar esta tarea",
       })
     }
 
@@ -260,4 +337,3 @@ module.exports = {
   reorderKanbanTasks,
   deleteKanbanTask,
 }
-

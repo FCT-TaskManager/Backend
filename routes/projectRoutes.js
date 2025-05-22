@@ -18,4 +18,3 @@ router.route("/:id/columns").get(projectController.getProjectColumns)
 router.route("/:id/kanban-tasks").get(projectController.getProjectKanbanTasks)
 
 module.exports = router
-

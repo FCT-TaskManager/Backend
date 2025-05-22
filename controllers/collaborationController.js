@@ -219,11 +219,21 @@ const respondToInvitation = async (req, res) => {
 
     // Si se acepta, añadir al usuario como miembro del proyecto
     if (accept) {
-      await ProjectMember.create({
-        projectId: invitation.projectId,
-        userId,
-        role: "member",
+      // Verificar si ya existe un registro para evitar duplicados
+      const existingMember = await ProjectMember.findOne({
+        where: {
+          projectId: invitation.projectId,
+          userId,
+        }
       })
+
+      if (!existingMember) {
+        await ProjectMember.create({
+          projectId: invitation.projectId,
+          userId,
+          role: "member",
+        })
+      }
     }
 
     // Crear notificación para el usuario que invitó
@@ -392,4 +402,3 @@ module.exports = {
   markAsRead,
   markAllAsRead,
 }
-
