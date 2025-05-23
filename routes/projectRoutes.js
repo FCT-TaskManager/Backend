@@ -9,7 +9,7 @@ router.use(protect)
 // Rutas de proyectos
 router.route("/").get(projectController.getProjects).post(projectController.createProject)
 
-router.route("/:id").get(projectController.getProjectById)
+router.route("/:id").get(projectController.getProjectById).delete(projectController.deleteProject)
 
 // Rutas de columnas
 router.route("/:id/columns").get(projectController.getProjectColumns)

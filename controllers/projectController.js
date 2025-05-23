@@ -56,18 +56,21 @@ const getProjects = async (req, res) => {
     const allProjects = []
 
     // Añadir proyectos propios
-    ownedProjects.forEach(project => {
+    ownedProjects.forEach((project) => {
       allProjectIds.add(project.id)
       allProjects.push(project)
     })
 
     // Añadir proyectos donde es miembro (sin duplicar)
-    memberProjects.forEach(project => {
+    memberProjects.forEach((project) => {
       if (!allProjectIds.has(project.id)) {
         allProjectIds.add(project.id)
         allProjects.push(project)
       }
     })
+
+    // Ordenar por fecha de creación
+    allProjects.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
     return res.status(200).json({
       success: true,
@@ -113,6 +116,13 @@ const getProjectById = async (req, res) => {
         {
           model: ProjectMember,
           as: "members",
+          include: [
+            {
+              model: User,
+              as: "user",
+              attributes: ["id", "name", "email"],
+            },
+          ],
         },
       ],
     })
@@ -126,7 +136,7 @@ const getProjectById = async (req, res) => {
 
     // Verificar si el usuario es propietario o miembro
     const isOwner = project.ownerId === userId
-    const isMember = project.members && project.members.some(member => member.userId === userId)
+    const isMember = project.members && project.members.some((member) => member.userId === userId)
 
     if (!isOwner && !isMember) {
       return res.status(403).json({
@@ -187,13 +197,18 @@ const createProject = async (req, res) => {
       ),
     )
 
-    // Obtener el proyecto actualizado con columnas
+    // Obtener el proyecto actualizado con columnas y propietario
     const projectWithColumns = await Project.findByPk(project.id, {
       include: [
         {
           model: Column,
           as: "columns",
           order: [["order", "ASC"]],
+        },
+        {
+          model: User,
+          as: "owner",
+          attributes: ["id", "name", "email"],
         },
       ],
     })
@@ -238,7 +253,7 @@ const getProjectColumns = async (req, res) => {
 
     // Verificar si el usuario es propietario o miembro
     const isOwner = project.ownerId === userId
-    const isMember = project.members && project.members.some(member => member.userId === userId)
+    const isMember = project.members && project.members.some((member) => member.userId === userId)
 
     if (!isOwner && !isMember) {
       return res.status(403).json({
@@ -299,7 +314,7 @@ const getProjectKanbanTasks = async (req, res) => {
 
     // Verificar si el usuario es propietario o miembro
     const isOwner = project.ownerId === userId
-    const isMember = project.members && project.members.some(member => member.userId === userId)
+    const isMember = project.members && project.members.some((member) => member.userId === userId)
 
     if (!isOwner && !isMember) {
       return res.status(403).json({
@@ -327,10 +342,67 @@ const getProjectKanbanTasks = async (req, res) => {
   }
 }
 
+// Modificar la función deleteProject para permitir eliminar proyectos con colaboradores
+
+// Eliminar un proyecto
+const deleteProject = async (req, res) => {
+  try {
+    const projectId = req.params.id
+    const userId = req.user.id
+
+    // Verificar que el proyecto pertenezca al usuario (solo el propietario puede eliminar)
+    const project = await Project.findOne({
+      where: { id: projectId, ownerId: userId },
+      include: [
+        {
+          model: ProjectMember,
+          as: "members",
+        },
+      ],
+    })
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        error: "Proyecto no encontrado o no tienes permisos para eliminarlo",
+      })
+    }
+
+    // Primero eliminar todos los miembros del proyecto
+    if (project.members && project.members.length > 0) {
+      await ProjectMember.destroy({
+        where: { projectId },
+      })
+    }
+
+    // Eliminar todas las invitaciones del proyecto
+    const { ProjectInvitation } = require("../models")
+    await ProjectInvitation.destroy({
+      where: { projectId },
+    })
+
+    // Eliminar el proyecto (las relaciones se eliminarán en cascada)
+    await project.destroy()
+
+    return res.status(200).json({
+      success: true,
+      message: "Proyecto eliminado correctamente",
+    })
+  } catch (error) {
+    console.error("Error deleting project:", error)
+    return res.status(500).json({
+      success: false,
+      error: "Error al eliminar el proyecto",
+      details: error.message,
+    })
+  }
+}
+
 module.exports = {
   getProjects,
   getProjectById,
   createProject,
   getProjectColumns,
   getProjectKanbanTasks,
+  deleteProject,
 }

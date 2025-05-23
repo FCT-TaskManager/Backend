@@ -5,6 +5,7 @@ const Project = require("./Project") // Nuevo modelo de proyectos
 const Column = require("./Column") // Nuevo modelo de columnas
 const KanbanTask = require("./KanbanTask") // Nuevo modelo de tareas Kanban
 const { ProjectInvitation, ProjectMember, Notification } = require("./ProjectModels")
+const TimeEntry = require("./TimeEntry") // Nuevo modelo de registros de tiempo
 
 // Relaciones existentes para tareas normales
 User.hasMany(Task, { foreignKey: "userId", as: "tasks" })
@@ -110,6 +111,17 @@ Notification.belongsTo(User, {
   foreignKey: "userId",
   as: "user",
 })
+
+// Relaciones para TimeEntry
+User.hasMany(TimeEntry, { foreignKey: "userId", as: "timeEntries" })
+TimeEntry.belongsTo(User, { foreignKey: "userId", as: "user" })
+
+Project.hasMany(TimeEntry, { foreignKey: "projectId", as: "timeEntries" })
+TimeEntry.belongsTo(Project, { foreignKey: "projectId", as: "project" })
+
+KanbanTask.hasMany(TimeEntry, { foreignKey: "taskId", as: "timeEntries" })
+TimeEntry.belongsTo(KanbanTask, { foreignKey: "taskId", as: "task" })
+
 // Exportar todos los modelos
 module.exports = {
   sequelize,
@@ -121,4 +133,5 @@ module.exports = {
   ProjectInvitation,
   ProjectMember,
   Notification,
+  TimeEntry,
 }
