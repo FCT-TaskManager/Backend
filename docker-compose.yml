@@ -1,5 +1,4 @@
 services:
-  # Base de datos MySQL
   mysql:
     image: mysql:8.0
     container_name: taskmanager_mysql
@@ -17,7 +16,6 @@ services:
     networks:
       - taskmanager_network
 
-  # phpMyAdmin
   phpmyadmin:
     image: phpmyadmin/phpmyadmin:latest
     container_name: taskmanager_phpmyadmin
